@@ -1,4 +1,4 @@
-import android,time, math, datetime
+import android,time, math
 droid=android.Android()
 droid.setScreenBrightness(0) #To save battery levels
 
@@ -6,7 +6,7 @@ droid.setScreenBrightness(0) #To save battery levels
 earthRadius=6369.62785
 locnDetails=[]
 landingChecker=[]
-altDropIndicator=0
+altDropIndicator =0
 contactNumber='XXXXXXXXXX'
 
 
@@ -16,21 +16,31 @@ def convertToRadians(degrees):
   return radians
 
 def batteryMonitor():
-  battery=droid.batteryGetLevel().result
+  droid.batteryStartMonitoring()
   droid.eventWaitFor('battery',None)
+  batlevel=droid.batteryGetLevel().result
+  droid.batteryStopMonitoring()
   return batlevel 
 
+def incrementer(a):
+  return a+1
+
+
 def hasLanded():
+  global altDropIndicator
   altRange=len(landingChecker)-1
   if (landingChecker[altRange]<landingChecker[altRange-1]):
-    altDropIndicator=altDropIndicator+1
-    if altDropIndicator>15:
-      landingSpotMessage="A suspected crash landing at"+str(locnDetails[altRange]['lat'])+" "+str(locnDetails[altRange]['long'])+"at a height of "+str(locnDetails[altRange]['alt'])
-      droid.makeToast("A suspected crash landing at"+str(locnDetails[altRange]['lat'])+" "+str(locnDetails[altRange]['long'])+"at a height of "+str(locnDetails[altRange]['alt']))
+    altDropIndicator=incrementer(altDropIndicator)
+
+  else:
+    altDropIndicator=0
+  if altDropIndicator>4:
+    landingSpotMessage="A suspected crash landing at"+str(locnDetails[altRange]['lat'])+" "+str(locnDetails[altRange]['long'])+"at a height of "+str(locnDetails[altRange]['alt'])
+    droid.makeToast("A suspected crash landing at"+str(locnDetails[altRange]['lat'])+" "+str(locnDetails[altRange]['long'])+"at a height of "+str(locnDetails[altRange]['alt']))
       #droid.smsSend(contactNumber,"Suspect that it has landed..terminating all functions")
-      return True
-    else:
-      return False
+    return True
+  else:
+    return False
 
 
 
@@ -39,25 +49,27 @@ def locator():
   droid.eventWaitFor("location")
   droid.makeToast ("Waiting for GPS fix")
   gpsread=droid.readLocation().result
+  print 'fix obtained'
   latitude=float(gpsread['gps']['latitude'])
   longitude=float(gpsread['gps']['longitude'])
   altitude = float( gpsread['gps']['altitude'])
   battery=batteryMonitor()
+  print 'battery obtained'
   if(len(locnDetails)==0):
-    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':datetime.datetime.now(),'distFromLaunchSite':0,'batterylevel':battery})
+    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':time.strftime("%H:%M:%S"),'distFromLaunchSite':0,'batterylevel':battery})
     landingChecker.append(altitude)
     print locnDetails[0]
     #droid.smsSend(contactNumber,locnDetails[0])
-  elif(len(locnDetails==1)):
+  elif(len(locnDetails)==1):
     distFromLaunchSite=distcal(locnDetails[0]['lat'],locnDetails[0]['long'])
-    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':datetime.datetime.now(),'distFromLaunchSite':distFromLaunchSite,'batterylevel':battery})
+    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':time.strftime("%H:%M:%S"),'distFromLaunchSite':distFromLaunchSite,'batterylevel':battery})
     landingChecker.append(altitude)
     print locnDetails[1]
     #droid.smsSend(contactNumber,locnDetails[1])
   else:
     ind=len(locnDetails)-1
     distFromLaunchSite=distcal(locnDetails[0]['lat'],locnDetails[0]['long'],locnDetails[ind]['lat'],locnDetails[ind]['long'])
-    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':datetime.datetime.now(),'distFromLaunchSite':distFromLaunchSite,'batterylevel':battery})
+    locnDetails.append({'lat':latitude,'long':longitude,'alt':altitude,'time':time.strftime("%H:%M:%S"),'distFromLaunchSite':distFromLaunchSite,'batterylevel':battery})
     landingChecker.append(altitude)
     print locnDetails[ind]
     #droid.smsSend(contactNumber,locnDetails[ind])
@@ -65,7 +77,7 @@ def locator():
 
 def distcal(l1,ln1,l2=0,ln2=0):
   dLat=convertToRadians(l2-l1)
-  dLong=convertToRadians(lt2-lt1)
+  dLong=convertToRadians(ln2-ln1)
   a=((math.sin(dLat/2))* (math.sin(dLat/2)))+(math.cos(convertToRadians(l1))* math.cos(convertToRadians(l2)))*(math.sin(dLong/2)*math.sin(dLong/2))
   t1= math.sqrt(a)
   t2= math.sqrt(1-a)
@@ -85,7 +97,7 @@ if response ['which']=='positive':
   locator()
   counter=int(droid.dialogGetInput('Enter the time remaining to launch','in seconds').result)
   while counter!=0: #to get some time for the launch process
-    print 'Launch in '+counter+' seconds..'
+    print 'Launch in '+str(counter)+' seconds..'
     time.sleep(1)
     counter=counter-1
 locator()
@@ -94,8 +106,8 @@ rocketFuel=True
 location=str('/sdcard/hellballs/')+str(camCount)+('.jpg') #To get unique filenames for the photos. Stops overwriting of previous photos
 while(rocketFuel):
    droid.cameraCapturePicture(location)
-   count=count+1
-   location=str('/sdcard/hellballs')+str(count)+('.jpg')
+   camCount=camCount+1
+   location=str('/sdcard/hellballs')+str(camCount)+('.jpg')
    locator()
    time.sleep(30) #takes a pic every 30 seconds. Can be changed as needed.
    blevel=batteryMonitor()
